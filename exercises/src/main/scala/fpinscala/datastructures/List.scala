@@ -1,10 +1,33 @@
 package fpinscala.datastructures
 
+import annotation.tailrec
+
 sealed trait List[+A] // `List` data type
 case object Nil extends List[Nothing] // data constructor for `List`
 case class Cons[+A](head: A, tail: List[A]) extends List[A]
 
+object ListMain {
+
+  import List._
+
+  def main(args: Array[String]) {
+    println("tail", tail(List("a", "b", "c", "d")))
+    println("drop", drop(List("a", "b", "c", "d"), 2))
+    println("dropWhile", dropWhile(List("a", "b", "c", "d"))(_ != "c"))
+    println("setHead", setHead(List("a", "b", "c", "d"))("x"))
+    println("reverse", reverse(List("a", "b", "c", "d")))
+    println("length", length(List("a", "b", "c", "d")))
+    println("init", init(List("a", "b", "c", "d")))
+    println("map", map(List("a", "b", "c", "d"))(_.toUpperCase))
+    println("flatten", flatten(List(List("a", "b"), List("c", "d"))))
+    println("foldLeft", foldLeft(List("a", "b", "c", "d"), "e")((b, a) => a + b))
+    println("foldLeftHard", foldLeftViaFoldRight(List("a", "b", "c", "d"), "e")((b, a) => a + b))
+  }
+
+}
+
 object List { // `List` companion object
+
   def sum(ints: List[Int]): Int = ints match { // Pattern matching example
     case Nil => 0
     case Cons(x,xs) => x + sum(xs)
@@ -51,19 +74,49 @@ object List { // `List` companion object
     foldRight(l, 1.0)(_ * _)
 
 
-  def tail[A](l: List[A]): List[A] = sys.error("todo")
+  def last[A](l: List[A]): List[A] = l match {
+    case Nil => sys.error("No more list")
+    case t@Cons(_, Nil) => t
+    case Cons(h, t) => tail(t)
+  }
 
-  def drop[A](l: List[A], n: Int): List[A] = sys.error("todo")
+  def tail[A](l: List[A]): List[A] = l match {
+    case Nil => Nil
+    case Cons(h, t) => t
+  }
 
-  def dropWhile[A](l: List[A])(f: A => Boolean): List[A] = sys.error("todo")
+  @tailrec
+  def drop[A](l: List[A], n: Int): List[A] = if (n == 0) l else drop(tail(l), n - 1)
 
-  def setHead[A](l: List[A])(h: A): List[A] = sys.error("todo")
+  @tailrec
+  def dropWhile[A](l: List[A])(f: A => Boolean): List[A] = l match {
+    case Nil => Nil
+    case l@Cons(h, t) => if (f(h)) dropWhile(t)(f) else l
+  }
 
-  def init[A](l: List[A]): List[A] = sys.error("todo")
+  def setHead[A](l: List[A])(h: A): List[A] = Cons(h, tail(l))
 
-  def length[A](l: List[A]): Int = sys.error("todo")
+  def init[A](l: List[A]): List[A] = reverse(tail(reverse(l)))
 
-  def foldLeft[A,B](l: List[A], z: B)(f: (B, A) => B): B = sys.error("todo")
+  def reverse[A](l: List[A]): List[A] = foldLeft(l, List[A]()) {
+    case (l, h) => Cons(h, l)
+  }
 
-  def map[A,B](l: List[A])(f: A => B): List[B] = sys.error("todo")
+  def length[A](l: List[A]): Int = foldLeft(l, 0)((l, _) => l + 1)
+
+  @tailrec
+  def foldLeft[A, B](l: List[A], z: B)(f: (B, A) => B): B = l match {
+    case Nil => z
+    case Cons(h, t) => foldLeft(t, f(z, h))(f)
+  }
+
+  def foldLeftViaFoldRight[A, B](l: List[A], z: B)(f: (B, A) => B): B = foldRight(reverse(l), z) ((a, b) => f(b, a))
+
+  def map[A, B](l: List[A])(f: A => B): List[B] = foldRight(l, List[B]()) {
+    case (a, b) => Cons(f(a), b)
+  }
+
+  def append2[A](a1: List[A], a2: List[A]): List[A] = foldRight(a1, a2)(Cons(_, _))
+
+  def flatten[A](l: List[List[A]]): List[A] = foldRight(l, List[A]())(append2)
 }
